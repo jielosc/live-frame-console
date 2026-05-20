@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Realtime Frame App</title>
+    <link rel="stylesheet" href="/static/style.css">
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>实时视频帧上传策略</h1>
+        <p id="status">未连接</p>
+      </header>
+
+      <section class="layout">
+        <div>
+          <div class="preview">
+            <video id="video" autoplay playsinline muted></video>
+            <p id="empty">启动摄像头后开始预览</p>
+          </div>
+          <canvas id="canvas" hidden></canvas>
+
+          <div class="controls">
+            <label>
+              Provider
+              <select id="provider">
+                <option value="local-qwen">Local Qwen</option>
+                <option value="openai">OpenAI</option>
+                <option value="claude">Claude</option>
+                <option value="gemini">Gemini</option>
+              </select>
+            </label>
+            <label>
+              策略
+              <select id="strategy">
+                <option value="clarity_mode">Clarity Mode / 1FPS / 1280 / JPEG 0.72</option>
+                <option value="motion_mode">Motion Mode / 4FPS / 640 / JPEG 0.64</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="actions">
+            <button id="cameraBtn">启动摄像头</button>
+            <button id="connectBtn" disabled>连接会话</button>
+            <button id="stopBtn" disabled>停止</button>
+          </div>
+
+          <p id="stats">frames: 0</p>
+        </div>
+
+        <div>
+          <textarea id="question" placeholder="输入问题，例如：现在画面里发生了什么？"></textarea>
+          <button id="askBtn" disabled>发送问题</button>
+          <div id="log"></div>
+        </div>
+      </section>
+    </main>
+    <script src="/static/app.js"></script>
+  </body>
+</html>
