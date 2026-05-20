@@ -12,7 +12,7 @@ from adapters import adapter_from_env
 
 ROOT = Path(__file__).resolve().parent
 
-app = FastAPI(title="Realtime Frame App")
+app = FastAPI(title="Live Frame Console")
 app.mount("/static", StaticFiles(directory=ROOT / "static"), name="static")
 
 

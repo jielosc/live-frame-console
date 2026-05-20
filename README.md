@@ -1,4 +1,4 @@
-# Realtime Frame App
+# Live Frame Console
 
 Minimal application layer for testing two live frame upload strategies. It does not deploy a model; it talks to provider adapters.
 
@@ -14,7 +14,7 @@ conda run -n qwen3vl python api_server.py --host 0.0.0.0 --port 8000
 Run this app:
 
 ```bash
-cd /home/lrt/realtime-frame-app
+cd /home/lrt/live-frame-console
 pip install -r requirements.txt
 uvicorn app:app --host 0.0.0.0 --port 8010
 ```
