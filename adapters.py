@@ -5,8 +5,10 @@ import json
 import os
 import time
 import uuid
+from collections import deque
 from typing import Any
 
+import httpx
 from fastapi import WebSocket
 from starlette.websockets import WebSocketDisconnect
 
@@ -136,8 +138,87 @@ class LocalQwenAdapter(RealtimeAdapter):
 
 
 class OpenAIAdapter(RealtimeAdapter):
+    def __init__(self, base_url: str, model: str, max_frames: int = 24) -> None:
+        self.base_url = base_url.rstrip("/")
+        self.model = model
+        self.max_frames = max_frames
+
     async def run(self, websocket: WebSocket) -> None:
-        await send_app_event(websocket, "error", {"message": "OpenAI adapter is not implemented yet."})
+        frames: deque[dict[str, Any]] = deque(maxlen=self.max_frames)
+        try:
+            while True:
+                raw = await websocket.receive_text()
+                event = json.loads(raw)
+                event_type = event.get("type")
+                payload = event.get("payload") or {}
+
+                if event_type == "session.start":
+                    budget = int(payload.get("maxFramesPerPrompt") or self.max_frames)
+                    frames = deque(maxlen=budget)
+                    await send_app_event(websocket, "session.ready", {})
+
+                elif event_type == "media.frame":
+                    frames.append(payload)
+
+                elif event_type == "prompt.ask":
+                    text = payload.get("text") or ""
+                    await self._ask(websocket, text, list(frames), payload)
+
+                elif event_type == "session.stop":
+                    return
+
+        except WebSocketDisconnect:
+            return
+        except Exception as exc:
+            await send_app_event(websocket, "error", {"message": f"OpenAI adapter error: {exc}"})
+
+    async def _ask(self, websocket: WebSocket, text: str, frame_list: list[dict[str, Any]], payload: dict[str, Any]) -> None:
+        content: list[dict[str, Any]] = []
+        for frame in frame_list:
+            b64 = frame.get("imageBase64") or ""
+            if b64:
+                content.append({
+                    "type": "image_url",
+                    "image_url": {"url": f"data:image/jpeg;base64,{b64}"},
+                })
+        content.append({"type": "text", "text": text})
+
+        messages = [{"role": "user", "content": content}]
+        max_tokens = int(payload.get("maxNewTokens") or 256)
+
+        await send_app_event(websocket, "answer.start", {})
+
+        collected = ""
+        try:
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                async with client.stream(
+                    "POST",
+                    f"{self.base_url}/v1/chat/completions",
+                    json={
+                        "model": self.model,
+                        "messages": messages,
+                        "max_tokens": max_tokens,
+                        "stream": True,
+                    },
+                ) as resp:
+                    resp.raise_for_status()
+                    async for line in resp.aiter_lines():
+                        if not line.startswith("data: "):
+                            continue
+                        data = line[6:]
+                        if data.strip() == "[DONE]":
+                            break
+                        chunk = json.loads(data)
+                        delta = (chunk.get("choices") or [{}])[0].get("delta") or {}
+                        token = delta.get("content") or ""
+                        if token:
+                            collected += token
+                            await send_app_event(websocket, "answer.delta", {"text": collected})
+        except Exception as exc:
+            await send_app_event(websocket, "error", {"message": f"LLM request failed: {exc}"})
+            return
+
+        await send_app_event(websocket, "answer.done", {"text": collected})
 
 
 class ClaudeAdapter(RealtimeAdapter):
@@ -154,7 +235,10 @@ def adapter_from_env(provider: str) -> RealtimeAdapter:
     if provider == "local-qwen":
         return LocalQwenAdapter(os.getenv("LOCAL_QWEN_WS_URL", "ws://127.0.0.1:8000/ws/realtime"))
     if provider == "openai":
-        return OpenAIAdapter()
+        return OpenAIAdapter(
+            base_url=os.getenv("OPENAI_BASE_URL", "http://192.168.207.214:8000"),
+            model=os.getenv("OPENAI_MODEL", "/data1/lrt/models/modelscope/Qwen2.5-VL-7B-Instruct"),
+        )
     if provider == "claude":
         return ClaudeAdapter()
     if provider == "gemini":
