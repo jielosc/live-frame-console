@@ -207,7 +207,12 @@ class OpenAIAdapter(RealtimeAdapter):
                         "stream": True,
                     },
                 ) as resp:
-                    resp.raise_for_status()
+                    if resp.status_code >= 400:
+                        body = await resp.aread()
+                        await send_app_event(websocket, "error", {
+                            "message": f"API error {resp.status_code}: {body.decode(errors='replace')}",
+                        })
+                        return
                     async for line in resp.aiter_lines():
                         if not line.startswith("data: "):
                             continue
