@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import json
-import os
 import time
 import uuid
 from collections import deque
@@ -11,6 +10,8 @@ from typing import Any
 import httpx
 from fastapi import WebSocket
 from starlette.websockets import WebSocketDisconnect
+
+from config import get_provider_config
 
 
 def now_ms() -> int:
@@ -232,15 +233,20 @@ class GeminiAdapter(RealtimeAdapter):
 
 
 def adapter_from_env(provider: str) -> RealtimeAdapter:
+    cfg = get_provider_config(provider)
+
     if provider == "local-qwen":
-        return LocalQwenAdapter(os.getenv("LOCAL_QWEN_WS_URL", "ws://127.0.0.1:8000/ws/realtime"))
+        return LocalQwenAdapter(url=cfg["ws_url"])
     if provider == "openai":
         return OpenAIAdapter(
-            base_url=os.getenv("OPENAI_BASE_URL", "http://192.168.207.214:8000"),
-            model=os.getenv("OPENAI_MODEL", "/data1/lrt/models/modelscope/Qwen2.5-VL-7B-Instruct"),
+            base_url=cfg["base_url"],
+            model=cfg["model"],
+            max_frames=cfg["max_frames"],
         )
     if provider == "claude":
         return ClaudeAdapter()
     if provider == "gemini":
         return GeminiAdapter()
-    return LocalQwenAdapter(os.getenv("LOCAL_QWEN_WS_URL", "ws://127.0.0.1:8000/ws/realtime"))
+
+    fallback = get_provider_config("local-qwen")
+    return LocalQwenAdapter(url=fallback["ws_url"])

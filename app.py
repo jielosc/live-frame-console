@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 from fastapi import FastAPI, WebSocket
@@ -8,6 +7,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from adapters import adapter_from_env
+from config import get_default_provider
 
 
 ROOT = Path(__file__).resolve().parent
@@ -24,6 +24,6 @@ async def index() -> FileResponse:
 @app.websocket("/ws/session")
 async def session(websocket: WebSocket) -> None:
     await websocket.accept()
-    provider = websocket.query_params.get("provider") or os.getenv("FRAME_APP_PROVIDER", "local-qwen")
+    provider = websocket.query_params.get("provider") or get_default_provider()
     adapter = adapter_from_env(provider)
     await adapter.run(websocket)

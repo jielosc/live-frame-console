@@ -28,21 +28,49 @@ Adapter (adapters.py)  ──►  AI Provider
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+
+# 复制配置模板并按需编辑
+cp config.yaml.example config.yaml
+
 uvicorn app:app --host 0.0.0.0 --port 8010
 ```
 
 浏览器打开 `http://127.0.0.1:8010`（需要摄像头权限，localhost 或 HTTPS 环境）。
 
-## 环境变量
+## 配置
 
-| 变量 | 默认值 | 说明 |
+模型和 Provider 通过 `config.yaml` 管理（从 `config.yaml.example` 复制）。`config.yaml` 已加入 `.gitignore`，不会提交到仓库。
+
+配置读取优先级（高 → 低）：
+
+1. WebSocket URL `?provider=` 查询参数
+2. 环境变量
+3. `config.yaml`
+4. 代码内默认值
+
+### config.yaml 示例
+
+```yaml
+default_provider: local-qwen
+
+providers:
+  local-qwen:
+    ws_url: "ws://127.0.0.1:8000/ws/realtime"
+
+  openai:
+    base_url: "http://127.0.0.1:8000"
+    model: "Qwen2.5-VL-7B-Instruct"
+    max_frames: 24
+```
+
+### 环境变量（可覆盖 config.yaml）
+
+| 变量 | 对应 config 字段 | 说明 |
 |---|---|---|
-| `FRAME_APP_PROVIDER` | `local-qwen` | 后端适配器：`local-qwen` / `openai` / `claude` / `gemini` |
-| `LOCAL_QWEN_WS_URL` | `ws://127.0.0.1:8000/ws/realtime` | Qwen 上游 WebSocket 地址 |
-| `OPENAI_BASE_URL` | `http://192.168.207.214:8000` | OpenAI 兼容 API 地址 |
-| `OPENAI_MODEL` | (见源码) | 请求中使用的模型标识 |
-
-也可通过 WebSocket URL 的 `?provider=` 查询参数按连接覆盖 provider。
+| `FRAME_APP_PROVIDER` | `default_provider` | 后端适配器：`local-qwen` / `openai` / `claude` / `gemini` |
+| `LOCAL_QWEN_WS_URL` | `providers.local-qwen.ws_url` | Qwen 上游 WebSocket 地址 |
+| `OPENAI_BASE_URL` | `providers.openai.base_url` | OpenAI 兼容 API 地址 |
+| `OPENAI_MODEL` | `providers.openai.model` | 请求中使用的模型标识 |
 
 ## 采集策略
 
@@ -77,9 +105,9 @@ uvicorn app:app --host 0.0.0.0 --port 8010
 
 ## 添加新 Provider
 
-继承 `RealtimeAdapter`，实现 `run(websocket)` 方法，在 `adapter_from_env()` 中注册即可。
+继承 `RealtimeAdapter`，实现 `run(websocket)` 方法，在 `adapter_from_env()` 和 `config.py` 中注册即可。
 
 ## 依赖
 
 - Python 3.10+
-- fastapi, uvicorn, websockets, httpx
+- fastapi, uvicorn, websockets, httpx, pyyaml
