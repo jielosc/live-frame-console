@@ -232,32 +232,20 @@ class OpenAIAdapter(RealtimeAdapter):
         await send_app_event(websocket, "answer.done", {"text": collected})
 
 
-class ClaudeAdapter(RealtimeAdapter):
-    async def run(self, websocket: WebSocket) -> None:
-        await send_app_event(websocket, "error", {"message": "Claude adapter is not implemented yet."})
-
-
-class GeminiAdapter(RealtimeAdapter):
-    async def run(self, websocket: WebSocket) -> None:
-        await send_app_event(websocket, "error", {"message": "Gemini Live image input is not compatible with the 4FPS strategy without explicit downgrade."})
-
-
 def adapter_from_env(provider: str) -> RealtimeAdapter:
     cfg = get_provider_config(provider)
+    protocol = cfg["protocol"]
 
-    if provider == "local-qwen":
+    if protocol == "ws":
         return LocalQwenAdapter(url=cfg["ws_url"])
-    if provider == "openai":
+
+    if protocol == "http":
         return OpenAIAdapter(
             base_url=cfg["base_url"],
             model=cfg["model"],
             api_key=cfg["api_key"],
             max_frames=cfg["max_frames"],
         )
-    if provider == "claude":
-        return ClaudeAdapter()
-    if provider == "gemini":
-        return GeminiAdapter()
 
     fallback = get_provider_config("local-qwen")
     return LocalQwenAdapter(url=fallback["ws_url"])

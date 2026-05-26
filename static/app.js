@@ -191,6 +191,24 @@
     questionEl.value = "";
   }
 
+  async function loadProviders() {
+    try {
+      const resp = await fetch("/api/providers");
+      const data = await resp.json();
+      (data.providers || []).forEach((name) => {
+        const opt = document.createElement("option");
+        opt.value = name;
+        opt.textContent = name;
+        providerEl.appendChild(opt);
+      });
+    } catch (e) {
+      const opt = document.createElement("option");
+      opt.value = "local-qwen";
+      opt.textContent = "local-qwen";
+      providerEl.appendChild(opt);
+    }
+  }
+
   cameraBtn.addEventListener("click", () => startCamera().catch((error) => log("error", error.message || String(error))));
   connectBtn.addEventListener("click", connect);
   stopBtn.addEventListener("click", stop);
@@ -198,5 +216,6 @@
   questionEl.addEventListener("keydown", (event) => {
     if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) ask();
   });
+  loadProviders();
   updateButtons();
 })();

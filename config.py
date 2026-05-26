@@ -9,7 +9,6 @@ import yaml
 _ROOT = Path(__file__).resolve().parent
 _CONFIG_PATH = _ROOT / "config.yaml"
 
-# In-memory config dict, loaded once at import time.
 _cfg: dict[str, Any] = {}
 
 if _CONFIG_PATH.exists():
@@ -21,31 +20,32 @@ def get_default_provider() -> str:
     return os.getenv("FRAME_APP_PROVIDER") or _cfg.get("default_provider") or "local-qwen"
 
 
-def get_provider_config(provider: str) -> dict[str, Any]:
-    """Return merged config for *provider*: config.yaml values overridden by env vars."""
+def get_all_provider_names() -> list[str]:
+    return list((_cfg.get("providers") or {}).keys())
+
+
+def get_provider_protocol(provider: str) -> str:
     section: dict[str, Any] = (_cfg.get("providers") or {}).get(provider) or {}
-
-    if provider == "local-qwen":
-        return {
-            "ws_url": os.getenv("LOCAL_QWEN_WS_URL") or section.get("ws_url") or "ws://127.0.0.1:8000/ws/realtime",
-        }
-
+    proto = section.get("protocol")
+    if proto in ("ws", "http"):
+        return proto
+    # backward compat: "openai" name without protocol defaults to http
     if provider == "openai":
-        return {
-            "base_url": os.getenv("OPENAI_BASE_URL") or section.get("base_url") or "http://127.0.0.1:8000",
-            "model": os.getenv("OPENAI_MODEL") or section.get("model") or "Qwen2.5-VL-7B-Instruct",
-            "api_key": os.getenv("OPENAI_API_KEY") or section.get("api_key") or "",
-            "max_frames": int(os.getenv("OPENAI_MAX_FRAMES") or section.get("max_frames") or 24),
-        }
+        return "http"
+    # "local-qwen" without protocol defaults to ws
+    if provider == "local-qwen":
+        return "ws"
+    return "http"
 
-    if provider == "claude":
-        return {
-            "api_key": os.getenv("CLAUDE_API_KEY") or section.get("api_key") or "",
-        }
 
-    if provider == "gemini":
-        return {
-            "api_key": os.getenv("GEMINI_API_KEY") or section.get("api_key") or "",
-        }
-
-    return section
+def get_provider_config(provider: str) -> dict[str, Any]:
+    """Return config for *provider* with sensible defaults."""
+    section: dict[str, Any] = (_cfg.get("providers") or {}).get(provider) or {}
+    return {
+        "protocol": get_provider_protocol(provider),
+        "ws_url": section.get("ws_url") or "ws://127.0.0.1:8000/ws/realtime",
+        "base_url": section.get("base_url") or "http://127.0.0.1:8000",
+        "model": section.get("model") or "",
+        "api_key": section.get("api_key") or "",
+        "max_frames": int(section.get("max_frames") or 24),
+    }

@@ -6,17 +6,17 @@
 default_provider: local-qwen
 
 providers:
+  # WebSocket protocol — bidirectional streaming (e.g. Qwen realtime server)
   local-qwen:
+    protocol: ws
     ws_url: "ws://127.0.0.1:8000/ws/realtime"
 
-  openai:
-    base_url: "http://127.0.0.1:8000"
-    model: "Qwen2.5-VL-7B-Instruct"
-    api_key: ""  # set via OPENAI_API_KEY env var or here
-    max_frames: 24
-
-  claude:
-    api_key: ""
-
-  gemini:
-    api_key: ""
+  # OpenAI-compatible HTTP protocol — any /v1/chat/completions endpoint
+  # Add as many as you need with custom names:
+  #
+  # siliconflow:
+  #   protocol: http
+  #   base_url: "https://api.siliconflow.cn"
+  #   model: "Qwen/Qwen3-VL-8B-Instruct"
+  #   api_key: "sk-..."
+  #   max_frames: 24

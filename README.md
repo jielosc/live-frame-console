@@ -14,10 +14,8 @@ FastAPI Server (app.py)
     │
     ▼
 Adapter (adapters.py)  ──►  AI Provider
-  - local-qwen              Qwen 实时 WebSocket 服务
-  - openai                   OpenAI 兼容 /v1/chat/completions
-  - claude                   (未实现)
-  - gemini                   (未实现)
+  - protocol: ws              Qwen 实时 WebSocket 服务
+  - protocol: http             OpenAI 兼容 /v1/chat/completions
 ```
 
 前端为纯 HTML/CSS/JS，无构建步骤。后端使用 FastAPI + Uvicorn。
@@ -39,39 +37,40 @@ uvicorn app:app --host 0.0.0.0 --port 8010
 
 ## 配置
 
-模型和 Provider 通过 `config.yaml` 管理（从 `config.yaml.example` 复制）。`config.yaml` 已加入 `.gitignore`，不会提交到仓库。
+Provider 通过 `config.yaml` 管理（从 `config.yaml.example` 复制）。`config.yaml` 已加入 `.gitignore`，不会提交到仓库。
 
-配置读取优先级（高 → 低）：
+两种协议路径：
 
-1. WebSocket URL `?provider=` 查询参数
-2. 环境变量
-3. `config.yaml`
-4. 代码内默认值
+| 协议 | 说明 | 适配器 |
+|---|---|---|
+| `ws` | WebSocket 双向流（如 Qwen 实时服务） | `LocalQwenAdapter` |
+| `http` | OpenAI 兼容 HTTP `/v1/chat/completions` | `OpenAIAdapter` |
 
 ### config.yaml 示例
 
 ```yaml
-default_provider: local-qwen
+default_provider: siliconflow
 
 providers:
   local-qwen:
+    protocol: ws
     ws_url: "ws://127.0.0.1:8000/ws/realtime"
 
-  openai:
-    base_url: "http://127.0.0.1:8000"
-    model: "Qwen2.5-VL-7B-Instruct"
+  siliconflow:
+    protocol: http
+    base_url: "https://api.siliconflow.cn"
+    model: "Qwen/Qwen3-VL-8B-Instruct"
+    api_key: "sk-..."
     max_frames: 24
 ```
 
-### 环境变量（可覆盖 config.yaml）
+可以添加任意数量的 OpenAI 兼容 provider，自定义名称即可。前端下拉框会自动从 `/api/providers` 读取。
 
-| 变量 | 对应 config 字段 | 说明 |
-|---|---|---|
-| `FRAME_APP_PROVIDER` | `default_provider` | 后端适配器：`local-qwen` / `openai` / `claude` / `gemini` |
-| `LOCAL_QWEN_WS_URL` | `providers.local-qwen.ws_url` | Qwen 上游 WebSocket 地址 |
-| `OPENAI_BASE_URL` | `providers.openai.base_url` | OpenAI 兼容 API 地址 |
-| `OPENAI_MODEL` | `providers.openai.model` | 请求中使用的模型标识 |
-| `OPENAI_API_KEY` | `providers.openai.api_key` | API Key（Bearer token） |
+### 配置优先级
+
+1. WebSocket URL `?provider=` 查询参数
+2. `config.yaml` 中的 `default_provider`
+3. 代码内默认值（`local-qwen`）
 
 ## 采集策略
 
@@ -104,9 +103,15 @@ providers:
 | `answer.done` | `text` | 回答完成（全文） |
 | `error` | `message` | 错误通知 |
 
+## API
+
+| 端点 | 说明 |
+|---|---|
+| `GET /api/providers` | 返回所有已配置的 provider 名称列表 |
+
 ## 添加新 Provider
 
-继承 `RealtimeAdapter`，实现 `run(websocket)` 方法，在 `adapter_from_env()` 和 `config.py` 中注册即可。
+在 `config.yaml` 的 `providers` 下添加条目，设置 `protocol`（`ws` 或 `http`）及对应参数，前端下拉框会自动显示。
 
 ## 依赖
 
