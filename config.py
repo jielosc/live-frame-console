@@ -24,7 +24,7 @@ def get_all_provider_names() -> list[str]:
     return list((_cfg.get("providers") or {}).keys())
 
 
-def get_provider_protocol(provider: str) -> str:
+def _get_provider_protocol(provider: str) -> str:
     section: dict[str, Any] = (_cfg.get("providers") or {}).get(provider) or {}
     proto = section.get("protocol")
     if proto in ("ws", "http"):
@@ -42,7 +42,7 @@ def get_provider_config(provider: str) -> dict[str, Any]:
     """Return config for *provider* with sensible defaults."""
     section: dict[str, Any] = (_cfg.get("providers") or {}).get(provider) or {}
     return {
-        "protocol": get_provider_protocol(provider),
+        "protocol": _get_provider_protocol(provider),
         "ws_url": section.get("ws_url") or "ws://127.0.0.1:8000/ws/realtime",
         "base_url": section.get("base_url") or "http://127.0.0.1:8000",
         "model": section.get("model") or "",

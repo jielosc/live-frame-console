@@ -116,7 +116,7 @@
         },
       }));
       frameCount += 1;
-      statsEl.textContent = `frames: ${frameCount} | ${strategyEl.value} | ${config.width}px / ${1000 / config.intervalMs}FPS`;
+      statsEl.textContent = `frames: ${frameCount} | ${strategyEl.value} | ${config.width}px / ${config.intervalMs > 0 ? 1000 / config.intervalMs : 0}FPS`;
     } finally {
       busy = false;
     }
@@ -148,7 +148,10 @@
       if (message.type === "session.state" && payload.frame_count != null) setStatus(`缓存帧数 ${payload.frame_count}`);
       if (message.type === "answer.start") currentAnswer = log("assistant", "...");
       if (message.type === "answer.delta" && currentAnswer) currentAnswer.textContent = payload.text || "";
-      if (message.type === "answer.done" && currentAnswer) currentAnswer.textContent = payload.text || "";
+      if (message.type === "answer.done" && currentAnswer) {
+        currentAnswer.textContent = payload.text || "";
+        currentAnswer = null;
+      }
       if (message.type === "error") log("error", payload.message || "会话错误");
     });
 
@@ -162,11 +165,13 @@
 
   function stop() {
     stopCapture();
-    if (socket && socket.readyState === WebSocket.OPEN) {
-      socket.send(JSON.stringify({ type: "session.stop", payload: {} }));
+    if (socket && socket.readyState !== WebSocket.CLOSED) {
+      if (socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: "session.stop", payload: {} }));
+      }
       socket.close();
+      // 状态清理由 close 事件统一处理
     }
-    socket = null;
     if (stream) {
       stream.getTracks().forEach((track) => track.stop());
     }

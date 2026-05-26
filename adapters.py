@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import time
 import uuid
 from collections import deque
@@ -12,6 +13,8 @@ from fastapi import WebSocket
 from starlette.websockets import WebSocketDisconnect
 
 from config import get_provider_config
+
+logger = logging.getLogger(__name__)
 
 
 def now_ms() -> int:
@@ -79,7 +82,7 @@ class LocalQwenAdapter(RealtimeAdapter):
                 "type": "session.start",
                 "payload": {
                     "video_max_frames": max_frames,
-                    "buffer_size": max(max_frames * 2, max_frames),
+                    "buffer_size": max_frames * 2,
                     "capture_policy": payload.get("strategy") or "motion_mode",
                     "adaptive_policy": "fixed-frame-app-v1",
                 },
@@ -247,5 +250,6 @@ def adapter_from_env(provider: str) -> RealtimeAdapter:
             max_frames=cfg["max_frames"],
         )
 
+    logger.warning("Unknown protocol %r for provider %r, falling back to local-qwen", protocol, provider)
     fallback = get_provider_config("local-qwen")
     return LocalQwenAdapter(url=fallback["ws_url"])
