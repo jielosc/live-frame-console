@@ -34,6 +34,7 @@ def get_provider_config(provider: str) -> dict[str, Any]:
         return {
             "base_url": os.getenv("OPENAI_BASE_URL") or section.get("base_url") or "http://127.0.0.1:8000",
             "model": os.getenv("OPENAI_MODEL") or section.get("model") or "Qwen2.5-VL-7B-Instruct",
+            "api_key": os.getenv("OPENAI_API_KEY") or section.get("api_key") or "",
             "max_frames": int(os.getenv("OPENAI_MAX_FRAMES") or section.get("max_frames") or 24),
         }
 

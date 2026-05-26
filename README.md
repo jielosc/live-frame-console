@@ -71,6 +71,7 @@ providers:
 | `LOCAL_QWEN_WS_URL` | `providers.local-qwen.ws_url` | Qwen 上游 WebSocket 地址 |
 | `OPENAI_BASE_URL` | `providers.openai.base_url` | OpenAI 兼容 API 地址 |
 | `OPENAI_MODEL` | `providers.openai.model` | 请求中使用的模型标识 |
+| `OPENAI_API_KEY` | `providers.openai.api_key` | API Key（Bearer token） |
 
 ## 采集策略
 

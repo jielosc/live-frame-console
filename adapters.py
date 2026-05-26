@@ -139,9 +139,10 @@ class LocalQwenAdapter(RealtimeAdapter):
 
 
 class OpenAIAdapter(RealtimeAdapter):
-    def __init__(self, base_url: str, model: str, max_frames: int = 24) -> None:
+    def __init__(self, base_url: str, model: str, api_key: str = "", max_frames: int = 24) -> None:
         self.base_url = base_url.rstrip("/")
         self.model = model
+        self.api_key = api_key
         self.max_frames = max_frames
 
     async def run(self, websocket: WebSocket) -> None:
@@ -190,8 +191,12 @@ class OpenAIAdapter(RealtimeAdapter):
         await send_app_event(websocket, "answer.start", {})
 
         collected = ""
+        headers: dict[str, str] = {}
+        if self.api_key:
+            headers["Authorization"] = f"Bearer {self.api_key}"
+
         try:
-            async with httpx.AsyncClient(timeout=60.0) as client:
+            async with httpx.AsyncClient(timeout=60.0, headers=headers) as client:
                 async with client.stream(
                     "POST",
                     f"{self.base_url}/v1/chat/completions",
@@ -241,6 +246,7 @@ def adapter_from_env(provider: str) -> RealtimeAdapter:
         return OpenAIAdapter(
             base_url=cfg["base_url"],
             model=cfg["model"],
+            api_key=cfg["api_key"],
             max_frames=cfg["max_frames"],
         )
     if provider == "claude":
