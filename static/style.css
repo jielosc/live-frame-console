@@ -160,3 +160,25 @@ textarea {
     height: 320px;
   }
 }
+
+.ttft {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  margin-bottom: 4px;
+  color: #fff;
+}
+
+.ttft.good {
+  background: #2da44e;
+}
+
+.ttft.ok {
+  background: #d4a72c;
+}
+
+.ttft.slow {
+  background: #cf222e;
+}

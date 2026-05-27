@@ -24,6 +24,8 @@
   let busy = false;
   let frameCount = 0;
   let currentAnswer = null;
+  let promptSentAtMs = null;
+  let ttftBadge = null;
 
   function strategy() {
     return strategies[strategyEl.value] || strategies.motion_mode;
@@ -146,11 +148,29 @@
       const payload = message.payload || {};
       if (message.type === "session.ready") setStatus("会话已连接");
       if (message.type === "session.state" && payload.frame_count != null) setStatus(`缓存帧数 ${payload.frame_count}`);
-      if (message.type === "answer.start") currentAnswer = log("assistant", "...");
-      if (message.type === "answer.delta" && currentAnswer) currentAnswer.textContent = payload.text || "";
+      if (message.type === "answer.start") {
+        const wrapper = log("assistant", "");
+        const span = document.createElement("span");
+        span.textContent = "...";
+        wrapper.appendChild(span);
+        currentAnswer = span;
+        ttftBadge = null;
+      }
+      if (message.type === "answer.delta" && currentAnswer) {
+        if (!ttftBadge && promptSentAtMs) {
+          const ttft = Date.now() - promptSentAtMs;
+          const badge = document.createElement("span");
+          badge.className = "ttft" + (ttft < 500 ? " good" : ttft < 1500 ? " ok" : " slow");
+          badge.textContent = `TTFT: ${ttft}ms`;
+          currentAnswer.parentElement.insertBefore(badge, currentAnswer);
+          ttftBadge = badge;
+        }
+        currentAnswer.textContent = payload.text || "";
+      }
       if (message.type === "answer.done" && currentAnswer) {
         currentAnswer.textContent = payload.text || "";
         currentAnswer = null;
+        promptSentAtMs = null;
       }
       if (message.type === "error") log("error", payload.message || "会话错误");
     });
@@ -185,12 +205,13 @@
     const text = questionEl.value.trim();
     if (!text || !socket || socket.readyState !== WebSocket.OPEN) return;
     log("user", text);
+    promptSentAtMs = Date.now();
     socket.send(JSON.stringify({
       type: "prompt.ask",
       payload: {
         text,
         maxNewTokens: 256,
-        clientSentAtMs: Date.now(),
+        clientSentAtMs: promptSentAtMs,
       },
     }));
     questionEl.value = "";
