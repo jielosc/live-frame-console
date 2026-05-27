@@ -135,6 +135,8 @@ class LocalQwenAdapter(RealtimeAdapter):
             "server.final_text": "answer.done",
             "server.error": "error",
         }
+        if not event_type:
+            return None
         app_type = mapping.get(event_type)
         if not app_type:
             return None
@@ -188,7 +190,19 @@ class OpenAIAdapter(RealtimeAdapter):
                 })
         content.append({"type": "text", "text": text})
 
-        messages = [{"role": "user", "content": content}]
+        messages = [
+            {
+                "role": "system",
+                "content": (
+                    "You are a real-time visual assistant. You receive consecutive video frames "
+                    "captured from a live camera feed. Treat them as a continuous scene — "
+                    "observe what is happening, identify objects, people, actions, and changes "
+                    "over time. Answer the user's questions concisely and accurately based on "
+                    "what you see. Reply in the same language as the user's question."
+                ),
+            },
+            {"role": "user", "content": content},
+        ]
         max_tokens = int(payload.get("maxNewTokens") or 256)
 
         await send_app_event(websocket, "answer.start", {})
