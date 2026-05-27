@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 from pathlib import Path
 from typing import Any
 
@@ -14,10 +13,6 @@ _cfg: dict[str, Any] = {}
 if _CONFIG_PATH.exists():
     with open(_CONFIG_PATH, encoding="utf-8") as f:
         _cfg = yaml.safe_load(f) or {}
-
-
-def get_default_provider() -> str:
-    return os.getenv("FRAME_APP_PROVIDER") or _cfg.get("default_provider") or "local-qwen"
 
 
 def get_all_provider_names() -> list[str]:
